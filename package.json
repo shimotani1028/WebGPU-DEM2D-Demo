@@ -4,9 +4,15 @@
   "description": "WebGPU-DEM-Demoは、WebGPUを使って2次元DEM(個別要素法)を高速化することを目的として作成されたDemoです。",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "parcel build src/index.html --public-url ./"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "cssnano": "^4.1.11",
+    "parcel-bundler": "^1.12.5",
+    "postcss": "^7.0.39"
+  }
 }

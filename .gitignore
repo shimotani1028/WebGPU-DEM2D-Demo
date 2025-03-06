@@ -3,12 +3,12 @@
 # dependencies
 /node_modules
 
-# production
-/dist
 
 # local env files
 .env*.local
 
+# parcel
+.cache
 
 # typescript
 *.tsbuildinfo
