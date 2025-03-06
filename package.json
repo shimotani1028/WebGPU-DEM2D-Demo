@@ -1,0 +1,12 @@
+{
+  "name": "webgpu-dem2d-demo",
+  "version": "0.1.0",
+  "description": "WebGPU-DEM-Demoは、WebGPUを使って2次元DEM(個別要素法)を高速化することを目的として作成されたDemoです。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
