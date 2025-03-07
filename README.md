@@ -10,4 +10,4 @@ Demoページは[こちら](https://shimotani1028.github.io/WebGPU-DEM2D-Demo/)
 
 ## コード解説
 
-[作成者のブログ](https://***)
+[作成者のブログ](https://ashikapengin.com/2025/03/07/webgpu-dem2d/)
