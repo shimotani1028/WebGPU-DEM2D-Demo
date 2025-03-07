@@ -1705,7 +1705,11 @@
       // console.log("actualFps", actualFps);
       // FPS表示を更新
       // drawFPS(actualFps, "FPS");
-      
+      if(actualFps < 1){
+        stopSimulation()
+        alert("計算が重いため、シミュレーションを停止しました \n 粒子数を見直してください。");
+        return
+      }
       // 経過時間を計算（ミリ秒から秒に変換）
       elapsedTime = elapsedTime + deltaTime / 1000;
       
