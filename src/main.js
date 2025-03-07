@@ -36,23 +36,23 @@
   // キャンバスのサイズ設定（属性とスタイル両方を設定）
   canvas.style.width = width + 'px';
   canvas.style.height = height + 'px';
-  const widthLength = parameter("width_length", 15.0); // canvas要素のwidthに対する実際の長さ(m)
+  const widthLength = parameter("width_length", 36.0); // canvas要素のwidthに対する実際の長さ(m)
 
   // 線分要素に関するパラメータ
   const NUM_LINES = 1; //parameter("line", 1); // 線分数
   const LINE_BUFFER_COUNT = 10; // 線分に対する必要な要素(位置、速度、...)
   const LINE_BUFFER_SIZE = NUM_LINES * LINE_BUFFER_COUNT * Float32Array.BYTES_PER_ELEMENT; // 線分の配列に必要なバッファサイズ
-  const x1 = parameter("x1", 4.0); // canvas要素のwidthに対する実際の長さ(m)
+  const x1 = parameter("x1", 9.2); // canvas要素のwidthに対する実際の長さ(m)
   const y1 = parameter("y1", 0.0); // canvas要素のwidthに対する実際の長さ(m)
-  const x2 = parameter("x2", 4.0); // canvas要素のwidthに対する実際の長さ(m)
-  const y2 = parameter("y2", 6.0); // canvas要素のwidthに対する実際の長さ(m)
+  const x2 = parameter("x2", 9.2); // canvas要素のwidthに対する実際の長さ(m)
+  const y2 = parameter("y2", 16.0); // canvas要素のwidthに対する実際の長さ(m)
 
   // 粒子要素に関するパラメータ
-  const NUM_BALLS = parameter("balls", 12000); // 粒子数
+  const NUM_BALLS = parameter("balls", 10000); // 粒子数
   const BUFFER_COUNT = 8; // 粒子に対する必要な要素(位置、速度、...)
   const BUFFER_SIZE = NUM_BALLS * BUFFER_COUNT * Float32Array.BYTES_PER_ELEMENT; // 粒子の配列に必要なバッファサイズ
-  const minRadius = clamp(parameter("min_radius", 0.01), 0.01, 0.1); // 最小粒子半径
-  const maxRadius = clamp(parameter("max_radius", 0.02), minRadius, 0.1); // 最大粒子半径
+  const minRadius = clamp(parameter("min_radius", 0.02), 0.02, 0.1); // 最小粒子半径
+  const maxRadius = clamp(parameter("max_radius", 0.04), minRadius, 0.1); // 最大粒子半径
 
   // 粒子を格納する格子に関するパラメータ
   const spacing = 2 * 2 * maxRadius + 0.001; // 格子間隔(最大直径の2倍は境界で処理がうまくできない場合があるので、少し余裕を持たせる
@@ -68,6 +68,7 @@
 
   // その他のパラメータ  
   let fps = 30.0; // フレームレート
+  const dt = 5.0e-4
   let offsetX = 0;  // ズーム(拡大・縮小)に関するパラメータ
   let offsetY = 0;  // ズーム(拡大・縮小)に関するパラメータ
   let zoomValue = 1.0; // ズーム(拡大・縮小)に関するパラメータ
@@ -496,7 +497,7 @@
       global_id : vec3<u32>,
     ) {
       let TIME_LOOP: u32 = 1;                   // 1fpsあたりのループ回数
-      let TIME_STEP: f32 = 1/scene.fps/400;   // 時間刻み(s)
+      let TIME_STEP: f32 = ${dt}; //1/scene.fps/400;   // 時間刻み(s)
       let num_balls: u32 = arrayLength(&output);
       // let num_lines: u32 = maxLineNumber;//arrayLength(&line_input);
 
@@ -1653,19 +1654,16 @@
 
 
   let counter = 0;
-  let timerId = undefined;
-  const UPDATE_INTERVAL = 1/fps*1000; //16.70 * 2; // Update every 16.7*2ms (30fps)
+
   // メインループ
-  async function updateGrid() {
+  async function updateGrid(actualFps) {
+    // 実際のFPSから反復回数を計算
+    const iteration = Math.ceil(1 / actualFps / dt);
 
-
-    // 処理開始時間を記録
-    const start = performance.now();
-
-    // cpu側でループする
-    // const dispatchSize = Math.ceil(NUM_BALLS / 64);
+    // コマンドを記録するエンコーダーを作成する
     let commandEncoder = device.createCommandEncoder();
-    for (let i = 0; i < 400; i++) {
+    // cpu側でループする
+    for (let i = 0; i < iteration; i++) {
       commandEncoder.clearBuffer(gl_atomic); // 初期化
       commandEncoder.clearBuffer(gl_output); // 初期化
       // 計算更新
@@ -1678,28 +1676,57 @@
 
     // レンダリング更新
     commandEncoder = updateRender(commandEncoder);
-
+    // 一連のコマンドをパッケージ化する
     const commands = commandEncoder.finish();
-
+    // コマンド送信
     device.queue.submit([commands]);
 
-
-    // 処理終了時間を記録
-    const end = performance.now();
-    // 計算時間を表示(s)
-    drawFPS(counter * UPDATE_INTERVAL / 1000, "s");
     counter++;
   }
   // END メインループ
 
+  // 変更後: requestAnimationFrameを使ったループ
+  let animationId = undefined;
+  let lastTime = 0;
+  let elapsedTime = 0; // シミュレーション開始時間を保存
+  const targetFps = 30; // 任意のFPS
+  const frameDuration = 1000 / targetFps;
+  function animate(currentTime) {
+    // 初回実行時に開始時間を記録
+    if (!lastTime) {
+      lastTime = currentTime;
+    }
+    
+    const deltaTime = currentTime - lastTime;
+    // 設定したFPSより時間が経っていたら計算を実行する
+    if (deltaTime >= frameDuration) {
+      // 実際のFPSを計算（1秒あたりのフレーム数）
+      const actualFps = 1000 / deltaTime;
+      // console.log("actualFps", actualFps);
+      // FPS表示を更新
+      // drawFPS(actualFps, "FPS");
+      
+      // 経過時間を計算（ミリ秒から秒に変換）
+      elapsedTime = elapsedTime + deltaTime / 1000;
+      
+      // 時間表示を更新
+      drawFPS(elapsedTime, "s");
+      // 現在の時間を保存しておく 
+      lastTime = currentTime;
+      // 計算実行 
+      updateGrid(actualFps);
+    }
+    
+    animationId = requestAnimationFrame(animate);
+  }
+
   // スタート処理
   function start() {
-    // シミュレーションリセット
-    if(timerId === undefined){
-      // シミュレーション開始
-      timerId = setInterval(updateGrid, UPDATE_INTERVAL);
-    }else{
-      console.log('すでにスタートしています。')
+    // スタートしていなければスタートする
+    if(animationId === undefined){
+      animationId = requestAnimationFrame(animate);
+      lastTime = undefined;
+      console.log("Simulation started.");
     }
   }
 
@@ -1707,11 +1734,13 @@
   startButton.addEventListener("click", start, false);
 
 
+
   // ストップ処理
   function stopSimulation() {
-    if (timerId !== undefined) {
-      clearInterval(timerId);
-      timerId = undefined;
+    // スタートしていればストップする
+    if (animationId !== undefined) {
+      cancelAnimationFrame(animationId);
+      animationId = undefined;
     }
     console.log("Simulation stopped.");
   }
@@ -1721,16 +1750,18 @@
 
   // シミュレーションリセット処理
   function resetSimulation() {
-    // タイマーが動作中なら停止
-    if (timerId !== undefined) {
-      clearInterval(timerId);
-      timerId = undefined;
+    // スタートしていれば停止する
+    if (animationId !== undefined) {
+      cancelAnimationFrame(animationId);
+      animationId = undefined;
     }
 
     // シミュレーションカウンタのリセット
+    elapsedTime = 0;
+    lastTime = undefined;
     counter = 0;
-    drawFPS(counter * UPDATE_INTERVAL / 1000, "s");
-
+    drawFPS(elapsedTime, "s");
+    // バッファの初期化
     initializeState();
 
     console.log("Simulation reset complete.");
